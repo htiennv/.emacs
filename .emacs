@@ -5,7 +5,6 @@
              '("melpa" . "https://melpa.org/packages/"))
 (package-initialize)
 
-;; Bootstrap `use-package'.
 (unless (package-installed-p 'use-package)
   (package-refresh-contents)
   (package-install 'use-package))
@@ -47,8 +46,8 @@
 (setq ring-bell-function 'ignore)
 
 ;; Window size
-(add-to-list 'default-frame-alist '(height . 32))
-(add-to-list 'default-frame-alist '(width . 90))
+(add-to-list 'default-frame-alist '(height . 33))
+(add-to-list 'default-frame-alist '(width . 97))
 
 ;; Highlight matching parens with no delay.
 (setq show-paren-delay 0)
@@ -65,33 +64,14 @@
  ;; If there is more than one, they won't work right.
  '(inhibit-startup-screen t)
  '(package-selected-packages
-   (quote
-	(rustic lsp-ui autopair cargo rust-playground toml-mode company magit use-package typescript-mode racer python-mode markdown-mode htmlize go-mode flycheck-rust exec-path-from-shell auto-complete))))
-
+   '(go-mode cargo flycheck-rust yaml-mode protobuf-mode dockerfile-mode docker autopair toml-mode yasnippet lsp-ui company lsp-mode orderless marginalia vertico consult selectrum which-key flycheck use-package)))
 ;; Setup font
 (custom-set-faces
  ;; custom-set-faces was added by Custom.
  ;; If you edit it by hand, you could mess it up, so be careful.
  ;; Your init file should contain only one such instance.
  ;; If there is more than one, they won't work right.
- '(default ((t (:family "JetBrains Mono" :foundry "JB" :slant normal :weight normal :height 102 :width normal)))))
-
-;; Features for all programming modes.
-(defun all-code-hooks ()
-  ;; Max line length.
-  (turn-on-auto-fill)
-  ;; Add matching paren/bracket automatically.
-  (autopair-mode)
-  ;; Draw line at max line length.
-  (fci-mode 1))
-
-;; Register the mode hook.
-(add-hook 'go-mode-hook 'all-code-hooks)
-(add-hook 'python-mode-hook 'all-code-hooks)
-(add-hook 'rust-mode-hook 'all-code-hooks)
-
-;; Delete trailing whitespace on save.
-(add-hook 'before-save-hook 'delete-trailing-whitespace)
+ '(default ((t (:family "JetBrains Mono" :foundry "JB" :slant normal :weight normal :height 109 :width normal)))))
 
 (use-package company
   :ensure t)
@@ -105,36 +85,41 @@
 (set-face-attribute 'flycheck-error nil :background "red")
 (set-face-attribute 'flycheck-error nil :foreground "white")
 
-;; Rust config
-(use-package rustic
+(use-package which-key
   :ensure
-  :bind (:map rustic-mode-map
-              ("M-j" . lsp-ui-imenu)
-              ("M-?" . lsp-find-references)
-              ("C-c C-c l" . flycheck-list-errors)
-              ("C-c C-c a" . lsp-execute-code-action)
-              ("C-c C-c r" . lsp-rename)
-              ("C-c C-c q" . lsp-workspace-restart)
-              ("C-c C-c Q" . lsp-workspace-shutdown)
-              ("C-c C-c s" . lsp-rust-analyzer-status))
+  :init
+  (which-key-mode))
+
+(use-package selectrum
+  :ensure
+  :init
+  (selectrum-mode)
+  :custom
+  (completion-styles '(flex substring partial-completion)))
+
+(use-package consult
+  :ensure t)
+
+;; (use-package evil
+;;   :ensure t
+;;   :config
+;;   (evil-mode)
+;;   (evil-set-undo-system 'undo-redo))
+
+(use-package vertico
+  :ensure t
   :config
-  ;; uncomment for less flashiness
-  ;; (setq lsp-eldoc-hook nil)
-  ;; (setq lsp-enable-symbol-highlighting nil)
-  ;; (setq lsp-signature-auto-activate nil)
+  (vertico-mode))
 
-  ;; comment to disable rustfmt on save
-  (setq rustic-format-on-save t)
-  (add-hook 'rustic-mode-hook 'rk/rustic-mode-hook))
+(use-package marginalia
+  :ensure t
+  :config
+  (marginalia-mode))
 
-(defun rk/rustic-mode-hook ()
-  ;; so that run C-c C-c C-r works without having to confirm, but don't try to
-  ;; save rust buffers that are not file visiting. Once
-  ;; https://github.com/brotzeit/rustic/issues/253 has been resolved this should
-  ;; no longer be necessary.
-  (when buffer-file-name
-    (setq-local buffer-save-without-query t))
-  (add-hook 'before-save-hook 'lsp-format-buffer nil t))
+(use-package orderless
+  :ensure t
+  :config
+  (setq completion-styles '(orderless)))
 
 (use-package lsp-mode
   :ensure
@@ -144,7 +129,9 @@
   (lsp-rust-analyzer-cargo-watch-command "clippy")
   (lsp-eldoc-render-all t)
   (lsp-idle-delay 0.6)
-  ;; enable / disable the hints as you prefer:
+  ;; This controls the overlays that display type and other hints inline. Enable
+  ;; / disable as you prefer. Well require a `lsp-workspace-restart' to have an
+  ;; effect on open projects.
   (lsp-rust-analyzer-server-display-inlay-hints t)
   (lsp-rust-analyzer-display-lifetime-elision-hints-enable "skip_trivial")
   (lsp-rust-analyzer-display-chaining-hints t)
@@ -162,3 +149,38 @@
   (lsp-ui-peek-always-show t)
   (lsp-ui-sideline-show-hover t)
   (lsp-ui-doc-enable nil))
+
+(use-package toml-mode
+  :ensure t)
+
+(use-package protobuf-mode
+  :ensure t)
+
+(use-package docker
+  :ensure t)
+
+(use-package dockerfile-mode
+  :ensure t)
+
+(use-package yaml-mode
+  :ensure t)
+
+(use-package flycheck-rust
+  :ensure t)
+
+(use-package cargo
+  :ensure t
+	:init
+  (add-hook 'rust-mode-hook 'cargo-minor-mode)
+  (add-hook 'toml-mode-hook 'cargo-minor-mode))
+
+(use-package rust-mode
+  :ensure t)
+
+(with-eval-after-load 'rust-mode
+  (add-hook 'flycheck-mode-hook #'flycheck-rust-setup))
+
+
+;; Go
+(use-package go-mode
+  :ensure t)
